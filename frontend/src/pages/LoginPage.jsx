@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import api from "../services/api";
+import api, { getBackendUrl } from "../services/api";
 
 const allowedRoles = ["patient", "driver", "admin"];
 
@@ -14,6 +14,11 @@ const LoginPage = () => {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Custom live backend URL modal state
+  const [currentBackendUrl, setCurrentBackendUrl] = useState(getBackendUrl());
+  const [showBackendConfig, setShowBackendConfig] = useState(false);
+  const [customUrlInput, setCustomUrlInput] = useState(getBackendUrl());
+
   const fillDemoCredentials = (targetRole) => {
     if (targetRole === "driver") {
       setEmail("driver@ambulance.com");
@@ -22,6 +27,26 @@ const LoginPage = () => {
       setEmail("patient@ambulance.com");
       setPassword("patient123");
     }
+  };
+
+  const saveBackendUrl = (event) => {
+    event.preventDefault();
+    if (!customUrlInput.trim()) return;
+    let clean = customUrlInput.trim().replace(/\/+$/, "");
+    if (!clean.endsWith("/api")) clean += "/api";
+    localStorage.setItem("LIVE_BACKEND_URL", clean);
+    setCurrentBackendUrl(clean);
+    setShowBackendConfig(false);
+    setMessage("✅ Backend URL updated successfully!");
+  };
+
+  const resetBackendUrl = () => {
+    localStorage.removeItem("LIVE_BACKEND_URL");
+    const defaultUrl = getBackendUrl();
+    setCurrentBackendUrl(defaultUrl);
+    setCustomUrlInput(defaultUrl);
+    setShowBackendConfig(false);
+    setMessage("Reset to default Backend URL.");
   };
 
   const onSubmit = async (event) => {
@@ -35,7 +60,13 @@ const LoginPage = () => {
       window.dispatchEvent(new Event("authChange"));
       navigate(`/dashboard/${data.user.role}`, { replace: true });
     } catch (error) {
-      setMessage(error.response?.data?.message || "Login failed");
+      const errText = error.response?.data?.message || error.message;
+      if (errText.includes("Network Error") || errText.includes("ERR_CONNECTION_REFUSED")) {
+        setMessage(`⚠️ Cannot connect to Backend at "${currentBackendUrl}". Click "⚙️ Configure Backend URL" below to set your live Render URL.`);
+        setShowBackendConfig(true);
+      } else {
+        setMessage(errText || "Login failed");
+      }
     } finally {
       setLoading(false);
     }
@@ -43,7 +74,38 @@ const LoginPage = () => {
 
   return (
     <section className="mx-auto max-w-md rounded-2xl border border-white/20 bg-white/10 p-8 shadow-2xl backdrop-blur-lg">
-      <h1 className="text-2xl font-bold capitalize text-white">{safeRole} Login</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold capitalize text-white">{safeRole} Login</h1>
+        <button
+          type="button"
+          onClick={() => setShowBackendConfig(!showBackendConfig)}
+          className="rounded-lg border border-white/20 bg-white/5 px-2.5 py-1 text-xs text-slate-300 hover:bg-white/10 hover:text-white"
+          title="Configure Live Render Backend API URL"
+        >
+          ⚙️ Backend URL
+        </button>
+      </div>
+
+      {/* Backend URL Config Card */}
+      {showBackendConfig && (
+        <form onSubmit={saveBackendUrl} className="mt-4 rounded-xl border border-cyan-400/40 bg-slate-950/80 p-4 text-xs space-y-3">
+          <p className="font-semibold text-cyan-300">🔗 Set Live Render Backend URL:</p>
+          <input
+            className="w-full rounded border border-white/20 bg-slate-900 px-3 py-2 text-xs font-mono text-cyan-200"
+            placeholder="https://your-backend.onrender.com/api"
+            value={customUrlInput}
+            onChange={(e) => setCustomUrlInput(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <button type="submit" className="rounded bg-cyan-600 px-3 py-1.5 font-semibold text-white hover:bg-cyan-500">
+              Save & Connect
+            </button>
+            <button type="button" onClick={resetBackendUrl} className="rounded border border-white/20 px-3 py-1.5 text-slate-300 hover:bg-white/10">
+              Reset
+            </button>
+          </div>
+        </form>
+      )}
 
       {/* Demo helper chip */}
       <div className="mt-4 rounded-xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-xs text-slate-300">
@@ -107,7 +169,7 @@ const LoginPage = () => {
         </Link>
       </p>
 
-      {message && <p className="mt-4 text-center text-sm font-medium text-red-400">{message}</p>}
+      {message && <p className="mt-4 text-center text-xs font-medium text-amber-300 leading-relaxed">{message}</p>}
     </section>
   );
 };
