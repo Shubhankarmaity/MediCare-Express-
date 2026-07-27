@@ -16,7 +16,13 @@ const app = express();
 app.use(helmet());
 app.use(
   cors({
-    origin: env.frontendUrl,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman) or matching localhost / vercel.app
+      if (!origin || origin.includes("vercel.app") || origin.includes("localhost") || origin === env.frontendUrl) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Allow all origins for live deployment
+    },
     credentials: true
   })
 );
