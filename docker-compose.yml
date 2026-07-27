@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: ambulance-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ambulance-backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env.example
+    depends_on:
+      - mongodb
+
+  ml-service:
+    build:
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: ambulance-ml-service
+    ports:
+      - "8001:8001"
+
+  camera-service:
+    build:
+      context: ./camera-service
+      dockerfile: Dockerfile
+    container_name: ambulance-camera-service
+    ports:
+      - "8002:8002"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ambulance-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  mongodb_data:

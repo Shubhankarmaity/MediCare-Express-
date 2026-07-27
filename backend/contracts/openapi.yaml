@@ -1,0 +1,150 @@
+openapi: 3.0.3
+info:
+  title: Ambulance Intelligent Routing Backend API
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+paths:
+  /api/health:
+    get:
+      summary: Service health
+      responses:
+        "200":
+          description: Service healthy
+  /api/auth/login:
+    post:
+      summary: Login for patient, driver, admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: Auth success
+  /api/bookings:
+    post:
+      summary: Create ambulance booking
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingRequest"
+      responses:
+        "201":
+          description: Booking created
+    get:
+      summary: List bookings by role
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Booking list
+  /api/bookings/{bookingId}/status:
+    patch:
+      summary: Update booking status
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: bookingId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [searching, driver_assigned, driver_arriving, reached_patient, completed, cancelled]
+      responses:
+        "200":
+          description: Status updated
+  /api/drivers/{driverId}/location:
+    patch:
+      summary: Update live driver location
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: driverId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeoPoint"
+      responses:
+        "200":
+          description: Location updated
+  /api/routing/recommend:
+    post:
+      summary: Recommend best route
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouteRecommendationRequest"
+      responses:
+        "200":
+          description: Route recommendation
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    GeoPoint:
+      type: object
+      required: [type, coordinates]
+      properties:
+        type:
+          type: string
+          enum: [Point]
+        coordinates:
+          type: array
+          minItems: 2
+          maxItems: 2
+          items:
+            type: number
+    CreateBookingRequest:
+      type: object
+      required: [emergencyType, phoneNumber, currentLocation]
+      properties:
+        emergencyType:
+          type: string
+          enum: [accident, cardiac, pregnancy, breathing, other]
+        phoneNumber:
+          type: string
+        currentLocation:
+          $ref: "#/components/schemas/GeoPoint"
+    RouteRecommendationRequest:
+      type: object
+      required: [bookingId, source, destination]
+      properties:
+        bookingId:
+          type: string
+        source:
+          $ref: "#/components/schemas/GeoPoint"
+        destination:
+          $ref: "#/components/schemas/GeoPoint"
