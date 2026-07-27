@@ -61,8 +61,10 @@ const LoginPage = () => {
       navigate(`/dashboard/${data.user.role}`, { replace: true });
     } catch (error) {
       const errText = error.response?.data?.message || error.message;
-      if (errText.includes("Network Error") || errText.includes("ERR_CONNECTION_REFUSED")) {
-        setMessage(`⚠️ Cannot connect to Backend at "${currentBackendUrl}". Click "⚙️ Configure Backend URL" below to set your live Render URL.`);
+      if (errText.includes("timeout") || errText.includes("10000ms") || errText.includes("60000ms")) {
+        setMessage("⏳ Render backend is currently waking up from free-tier sleep mode (cold start takes ~30 seconds). Please click Login again in a few seconds!");
+      } else if (errText.includes("Network Error") || errText.includes("ERR_CONNECTION_REFUSED")) {
+        setMessage(`⚠️ Cannot connect to Backend at "${currentBackendUrl}". Click "⚙️ Backend URL" above to verify your live Render URL.`);
         setShowBackendConfig(true);
       } else {
         setMessage(errText || "Login failed");

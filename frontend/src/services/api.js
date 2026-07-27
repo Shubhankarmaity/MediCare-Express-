@@ -25,7 +25,7 @@ export const getBackendUrl = () => {
 };
 
 const api = axios.create({
-  timeout: 10000
+  timeout: 60000 // 60s timeout to gracefully allow Render free tier cold-start wakeups
 });
 
 // Dynamic baseURL interceptor so backend URL updates without app reload
