@@ -1,4 +1,5 @@
 const axios = require("axios");
+const mongoose = require("mongoose");
 const env = require("../config/env");
 const { getLiveWeather } = require("./weather.service");
 const Route = require("../models/Route");
@@ -225,8 +226,8 @@ const getRecommendedRoute = async (
   evaluatedRoutes.sort((a, b) => a.totalTravelTimeSeconds - b.totalTravelTimeSeconds);
   const bestRoute = evaluatedRoutes[0];
 
-  // 5. Asynchronously record selected route log in MongoDB
-  if (bookingId) {
+  // 5. Asynchronously record selected route log in MongoDB if bookingId is a valid ObjectId
+  if (bookingId && mongoose.Types.ObjectId.isValid(bookingId)) {
     Route.create({
       bookingId,
       selectedRouteId: bestRoute.routeId,

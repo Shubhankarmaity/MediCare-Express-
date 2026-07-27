@@ -1,7 +1,7 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const authenticate = require("../middlewares/auth.middleware");
 const Booking = require("../models/Booking");
-const Driver = require("../models/Driver");
 const { getRecommendedRoute } = require("../services/route.service");
 
 const router = express.Router();
@@ -20,33 +20,35 @@ const handleSuggest = async (req, res, next) => {
     let eLng = parseFloat(endLng);
     let currentBooking = null;
 
-    if (bookingId) {
-      currentBooking = await Booking.findById(bookingId).populate("driverId");
-      if (currentBooking) {
-        eLat = currentBooking.currentLocation.coordinates[1];
-        eLng = currentBooking.currentLocation.coordinates[0];
+    if (bookingId && mongoose.Types.ObjectId.isValid(bookingId)) {
+      try {
+        currentBooking = await Booking.findById(bookingId).populate("driverId");
+        if (currentBooking && currentBooking.currentLocation?.coordinates) {
+          eLat = currentBooking.currentLocation.coordinates[1];
+          eLng = currentBooking.currentLocation.coordinates[0];
 
-        if (currentBooking.driverId && currentBooking.driverId.currentLocation) {
-          sLng = currentBooking.driverId.currentLocation.coordinates[0];
-          sLat = currentBooking.driverId.currentLocation.coordinates[1];
+          if (currentBooking.driverId && currentBooking.driverId.currentLocation?.coordinates) {
+            sLng = currentBooking.driverId.currentLocation.coordinates[0];
+            sLat = currentBooking.driverId.currentLocation.coordinates[1];
+          }
         }
+      } catch (dbErr) {
+        console.warn("MongoDB Booking query skipped in suggest:", dbErr.message);
       }
     }
 
-    // Fallback if missing lat/lng
-    if (isNaN(sLat) || isNaN(sLng) || isNaN(eLat) || isNaN(eLng)) {
-      return res.status(400).json({
-        success: false,
-        message: "Valid start and end coordinates (startLat, startLng, endLat, endLng) or bookingId required"
-      });
-    }
+    // Fallback Kolkata coordinates if missing/invalid
+    sLat = isNaN(sLat) ? 22.5726 : sLat;
+    sLng = isNaN(sLng) ? 88.3639 : sLng;
+    eLat = isNaN(eLat) ? 22.733892 : eLat;
+    eLng = isNaN(eLng) ? 88.500191 : eLng;
 
     const recommendation = await getRecommendedRoute(
       sLat,
       sLng,
       eLat,
       eLng,
-      bookingId || null,
+      bookingId && mongoose.Types.ObjectId.isValid(bookingId) ? bookingId : null,
       cameraMetrics || null
     );
 
@@ -56,6 +58,7 @@ const handleSuggest = async (req, res, next) => {
       ...recommendation
     });
   } catch (error) {
+    console.error("Error in route suggest endpoint:", error);
     next(error);
   }
 };
