@@ -104,7 +104,7 @@ const PatientDashboard = () => {
   /* ── Fetch AI Route suggestion for Patient from Kolkata ── */
   useEffect(() => {
     if (!booking || ["completed", "cancelled"].includes(booking.status)) return;
-    const pCoords = booking.currentLocation.coordinates;
+    const pCoords = booking.currentLocation?.coordinates || [KOLKATA_LNG, KOLKATA_LAT];
     const pLat = pCoords[1] >= 20 && pCoords[1] <= 25 ? pCoords[1] : KOLKATA_LAT;
     const pLng = pCoords[0] >= 85 && pCoords[0] <= 90 ? pCoords[0] : KOLKATA_LNG;
     const dPos = driverPos && driverPos[0] >= 20 && driverPos[0] <= 25 ? driverPos : [KOLKATA_LAT, KOLKATA_LNG];
@@ -118,7 +118,7 @@ const PatientDashboard = () => {
         if (data.success) setRouteData(data);
       })
       .catch(() => {});
-  }, [booking?._id, booking?.status, driverPos]);
+  }, [booking?._id, booking?.status, driverPos?.[0], driverPos?.[1]]);
 
   /* ── Socket.io: join room + listen for updates ── */
   useEffect(() => {
@@ -409,8 +409,9 @@ const PatientDashboard = () => {
                 {/* Render AI Route Polyline */}
                 {routeData?.bestRoute?.polylinePoints && (
                   <Polyline
+                    key={`patient-route-${routeData.generatedAt || Date.now()}`}
                     positions={routeData.bestRoute.polylinePoints}
-                    pathOptions={{ color: "#10b981", weight: 5, opacity: 0.85 }}
+                    pathOptions={{ color: "#10b981", weight: 6, opacity: 0.9 }}
                   />
                 )}
                 {driverPos && <FlyToDriver position={driverPos} />}

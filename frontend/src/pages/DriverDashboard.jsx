@@ -174,8 +174,10 @@ const DriverDashboard = () => {
   }, [booking, simLat, simLng, lastCameraMetrics]);
 
   useEffect(() => {
-    fetchRouteSuggestion();
-  }, [booking?._id, booking?.status]);
+    if (booking && !["completed", "cancelled"].includes(booking.status)) {
+      fetchRouteSuggestion();
+    }
+  }, [booking?._id, booking?.status, simLat, simLng, fetchRouteSuggestion]);
 
   /* ── WebRTC Device Camera Controls ── */
   const startCamera = async () => {
@@ -782,18 +784,19 @@ const DriverDashboard = () => {
                 {/* Render AI Recommended Route Polyline */}
                 {routeData?.bestRoute?.polylinePoints && (
                   <Polyline
+                    key={`best-route-${routeData.generatedAt || Date.now()}`}
                     positions={routeData.bestRoute.polylinePoints}
-                    pathOptions={{ color: "#10b981", weight: 5, opacity: 0.85 }}
+                    pathOptions={{ color: "#10b981", weight: 6, opacity: 0.9 }}
                   />
                 )}
 
                 {/* Render Alternative Route Polylines */}
                 {routeData?.alternatives?.map((alt) =>
-                  alt.routeId !== routeData.bestRoute.routeId && alt.polylinePoints ? (
+                  alt.routeId !== routeData.bestRoute?.routeId && alt.polylinePoints ? (
                     <Polyline
-                      key={alt.routeId}
+                      key={`alt-route-${alt.routeId}-${routeData.generatedAt || Date.now()}`}
                       positions={alt.polylinePoints}
-                      pathOptions={{ color: "#64748b", weight: 3, opacity: 0.45, dashArray: "6, 6" }}
+                      pathOptions={{ color: "#64748b", weight: 3, opacity: 0.5, dashArray: "6, 6" }}
                     />
                   ) : null
                 )}
